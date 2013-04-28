@@ -4,7 +4,10 @@
     </description>
     <!--NOTE: set the license and author before you publish this code-->
     <license></license>
-    <author>Unknown Author</author>
+    <author>Lars Tingelstad</author>
     <depend package="rtt" />
+    <rosdep name="eigen"/>
+    <depend package="orocos_kdl"/>
+    <depend package="ocl"/>
 </package>
 
