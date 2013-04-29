@@ -29,8 +29,9 @@ class UniversalRobotsUR5 : public RTT::TaskContext{
     std::vector<double> qdot_std;
     std::vector<double> q_cmd_std;
     // kdl
-    KDL::Frame tool_frame;
     KDL::JntArray q_kdl;
+    KDL::JntArray qdot_kdl;
+    KDL::Frame tool_frame;
     KDL::Chain frame_chain;
     KDL::ChainFkSolverPos_recursive* fk;
     KDL::ChainJntToJacSolver* jnt2jac;
