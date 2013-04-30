@@ -8,10 +8,15 @@
 UniversalRobotsUR5::UniversalRobotsUR5(std::string const& name) :
     TaskContext(name),
     q_kdl(6),
+    q_kdl_cmd(6),
     qdot_kdl(6),
     q_std(6,0),
     qdot_std(6,0),
-    q_cmd_std(6,0) {
+    q_cmd_std(6,0),
+    fk_pos(NULL),
+    jnt2jac(NULL),
+    ik_vel(NULL),
+    ik_pos(NULL) {
     // setup output ports
     this->ports()->addPort("UR5DesiredJointPosition", q_to_robot);
     q_to_robot.setDataSample(q_cmd_std);
@@ -23,6 +28,7 @@ UniversalRobotsUR5::UniversalRobotsUR5(std::string const& name) :
             "pose from mounting-plate to tool center point");
 
     KDL::SetToZero(q_kdl);
+    KDL::SetToZero(q_kdl_cmd);
     KDL::SetToZero(qdot_kdl);
 
   std::cout << "UniversalRobotsUR5 constructed !" <<std::endl;
@@ -42,18 +48,22 @@ bool UniversalRobotsUR5::configureHook(){
         frame_chain.addSegment(KDL::Segment(KDL::Joint(KDL::Joint::RotZ),
                 KDL::Frame::DH(DH_A[i], DH_ALPHA[i], DH_D[i], 0)));
     }
-    //q_kdl = KDL::JntArray(6);
+    KDL::JntArray q_kdl;
+    q_kdl = KDL::JntArray(6);
     // initialize position vector to home offset
-    for (unsigned int i; i < 6; i++) {
+
+    for (unsigned int i=0; i < 6; i++) {
         q_kdl(i) = DH_Q_HOME_OFFSET[i];
     }
 
     // create solvers for the chain: pose and jacobian solver
-    fk = new KDL::ChainFkSolverPos_recursive(frame_chain);
+    fk_pos = new KDL::ChainFkSolverPos_recursive(frame_chain);
     jnt2jac = new KDL::ChainJntToJacSolver(frame_chain);
+    ik_vel = new KDL::ChainIkSolverVel_pinv(frame_chain);
+    ik_pos = new KDL::ChainIkSolverPos_NR(frame_chain, *(fk_pos), *(ik_vel));
 
     //fk->JntToCart(q_kdl, tool_frame);
-  std::cout << "UniversalRobotsUR5 configured !" <<std::endl;
+    std::cout << "UniversalRobotsUR5 configured !" <<std::endl;
 
     return true;
 }
@@ -64,17 +74,21 @@ bool UniversalRobotsUR5::startHook(){
 }
 
 void UniversalRobotsUR5::updateHook(){
+    std::cout << "UniversalRobotsUR5 executes updateHook !" <<std::endl;
 
 
     q_from_robot.read(q_std);
-    for (unsigned int i; i < 6; i++) {
+    for (unsigned int i=0; i < 6; i++) {
         q_kdl(i) = q_std[i];
     }
-    fk->JntToCart(q_kdl, tool_frame);
+    fk_pos->JntToCart(q_kdl, tool_frame);
 
-    //std::cout << tool_frame.p << std::endl;
+    std::cout << tool_frame.p << std::endl;
     //qdot_from_robot.read(qdot_std);
-    q_std[0] += 1.0 / 60.0;
+    //q_std[0] += 1.0 / 60.0;
+    tool_frame.p[0] += 0.001;
+
+    ik_pos->CartToJnt(q_kdl, tool_frame, q_kdl_cmd);
 
 
     // 1 rad/s
@@ -84,7 +98,10 @@ void UniversalRobotsUR5::updateHook(){
     //}
     //std::cout << std::endl;
 
-    q_to_robot.write(q_std);
+    for (unsigned int i=0; i < 6; i++) {
+        q_cmd_std[i] = q_kdl_cmd(i);
+    }
+    q_to_robot.write(q_cmd_std);
     //q_to_robot.write(q_cmd_std);
 
     //std::cout << "UniversalRobotsUR5 executes updateHook !" <<std::endl;

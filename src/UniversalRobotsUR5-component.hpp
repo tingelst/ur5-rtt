@@ -8,6 +8,8 @@
 #include <kdl/jacobian.hpp>
 #include <kdl/chainfksolverpos_recursive.hpp>
 #include <kdl/chainjnttojacsolver.hpp>
+#include <kdl/chainiksolverpos_nr.hpp>
+#include <kdl/chainiksolvervel_pinv.hpp>
 
 class UniversalRobotsUR5 : public RTT::TaskContext{
   public:
@@ -30,11 +32,16 @@ class UniversalRobotsUR5 : public RTT::TaskContext{
     std::vector<double> q_cmd_std;
     // kdl
     KDL::JntArray q_kdl;
+    KDL::JntArray q_kdl_cmd;
     KDL::JntArray qdot_kdl;
+
     KDL::Frame tool_frame;
     KDL::Chain frame_chain;
-    KDL::ChainFkSolverPos_recursive* fk;
+    // solvers
+    KDL::ChainFkSolverPos_recursive* fk_pos;
     KDL::ChainJntToJacSolver* jnt2jac;
+    KDL::ChainIkSolverVel_pinv* ik_vel;
+    KDL::ChainIkSolverPos_NR* ik_pos;
     // cycle time
     double time_period;
 
